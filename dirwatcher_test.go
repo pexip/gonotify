@@ -24,14 +24,20 @@ func TestDirWatcher(t *testing.T) {
 	t.Run("ExistingFile", func(t *testing.T) {
 
 		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-		defer cancel()
+		dw, err := NewDirWatcher(ctx, IN_CREATE, dir)
+		if err != nil {
+			t.Error(err)
+		}
+		defer func() {
+			cancel()
+			<-dw.Done()
+		}()
 
 		f, err := os.OpenFile(filepath.Join(dir, "f1"), os.O_CREATE, os.ModePerm)
 		f.Close()
 
 		defer os.Remove(filepath.Join(dir, "f1"))
 
-		dw, err := NewDirWatcher(ctx, IN_CREATE, dir)
 		if err != nil {
 			t.Error(err)
 			t.Fail()
@@ -59,14 +65,15 @@ func TestDirWatcher(t *testing.T) {
 	})
 
 	t.Run("FileInSubdir", func(t *testing.T) {
-
 		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-		defer cancel()
-
 		dw, err := NewDirWatcher(ctx, IN_CREATE, dir)
 		if err != nil {
 			t.Error(err)
 		}
+		defer func() {
+			cancel()
+			<-dw.Done()
+		}()
 
 		err = os.Mkdir(filepath.Join(dir, "subfolder"), os.ModePerm)
 		if err != nil {
@@ -113,12 +120,15 @@ func TestDirWatcher(t *testing.T) {
 	t.Run("ClosedDirwatcherWithNotConsumedEvents", func(t *testing.T) {
 
 		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-		defer cancel()
 
 		dw, err := NewDirWatcher(ctx, IN_CREATE, dir)
 		if err != nil {
 			t.Error(err)
 		}
+		defer func() {
+			cancel()
+			<-dw.Done()
+		}()
 
 		err = os.Mkdir(filepath.Join(dir, "subfolder2"), os.ModePerm)
 		if err != nil {

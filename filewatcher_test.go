@@ -22,13 +22,10 @@ func TestFileWatcher(t *testing.T) {
 	defer os.Remove(dir)
 
 	t.Run("Simple", func(t *testing.T) {
-
 		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-		defer cancel()
 
 		f1 := filepath.Join(dir, "/dir1/foo")
 		f2 := filepath.Join(dir, "/dir2/bar")
-
 		os.MkdirAll(filepath.Dir(f1), os.ModePerm)
 		os.MkdirAll(filepath.Dir(f2), os.ModePerm)
 
@@ -36,6 +33,10 @@ func TestFileWatcher(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
+		defer func() {
+			cancel()
+			<-fw.Done()
+		}()
 
 		{
 			f, err := os.OpenFile(f1, os.O_RDWR|os.O_CREATE, 0)
@@ -129,12 +130,14 @@ func TestFileWatcher(t *testing.T) {
 
 	t.Run("ClosedFileWatcherHasClosedChannel", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-		defer cancel()
-
 		fw, err := NewFileWatcher(ctx, IN_ALL_EVENTS, filepath.Join(dir, "foo"))
 		if err != nil {
 			t.Error(err)
 		}
+		defer func() {
+			cancel()
+			<-fw.Done()
+		}()
 
 		go func() {
 			for e := range fw.C {
